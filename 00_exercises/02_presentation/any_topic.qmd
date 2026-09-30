@@ -1,0 +1,226 @@
+---
+title: "Stats & Music"
+author: 
+    name: Theresa Siepe
+    id: ts
+    orcid: 0009-0002-8460-3759
+    email: t.siepe@uu.nl
+format: 
+  revealjs:
+    progress: true
+    transition: fade
+    slide-number: true
+    margin: 0.075
+    logo: "any_topic_files/logo/statistics.png"
+    toc: false
+    scrollable: true
+    footer: Theresa Siepe
+editor: visual
+bibliography: export-data.bib
+---
+
+## Load all my listening stats
+
+### (2013 onwards)
+
+```{r}
+#load packages
+library(tidyverse)
+library(jsonlite)
+library(lubridate)
+library(dygraphs)
+```
+
+```{{r}}
+|# cache: true
+data <- list.files("any_topic_files/spotify_data/",
+                      pattern = "\\.json$",
+                      full.names = TRUE)
+
+spotify <- data |>
+  map(\(f) fromJSON(f, flatten = TRUE)) |>
+  bind_rows()
+
+#check
+glimpse(spotify)
+```
+
+```{r read_data}
+#| cache: true
+  
+data <- list.files("any_topic_files/spotify_data/",
+                      pattern = "\\.json$",
+                      full.names = TRUE)
+
+spotify <- data |>
+  map(\(f) fromJSON(f, flatten = TRUE)) |>
+  bind_rows()
+
+#check
+#glimpse(spotify)
+
+data <- list.files("any_topic_files/spotify_data/",
+                      pattern = "\\.json$",
+                      full.names = TRUE)
+
+spotify <- data |>
+  map(\(f) fromJSON(f, flatten = TRUE)) |>
+  bind_rows()
+
+#check
+#glimpse(spotify)
+```
+
+
+```{r}
+spotify <- spotify |>
+  transmute(
+    ts         = ymd_hms(ts),
+    year       = year(ts),
+    ms_played  = ms_played,
+    minutes    = ms_played / 60000,
+    titel      = master_metadata_track_name,
+    artist  = master_metadata_album_artist_name,
+    album      = master_metadata_album_album_name,
+    skipped, shuffle, offline, platform,
+    reason_start, reason_end
+  ) |>
+  filter(!is.na(titel))   # delete Podcasts 
+```
+
+```{r}
+my_fav_s <- spotify |>
+  count(titel, artist, sort = TRUE) |>
+  slice_head(n = 10)
+
+fav_artist_per_year <- spotify |>
+  group_by(year, artist) |>
+  summarise(hours = sum(minutes) / 60, .groups = "drop") |>
+  group_by(year) |>
+  slice_max(hours, n = 1)
+
+
+
+```
+
+## Interactive Table
+
+```{r}
+#| echo: false
+
+
+library(DT)
+table_tbl <- spotify |>
+  select(year, minutes, titel, artist)|>
+  group_by(titel, artist)|>
+  summarise(hours = sum(minutes) / 60, .groups = "drop") |> 
+  filter(hours >= 1)
+
+table_tbl |>
+  datatable(options = list(pageLength = 25))
+```
+
+This table shows the title, the artist and how many hours I listened to that song during all years I used Spotify.
+
+
+## Standing Still
+
+This is the album cover of "Standing Still" by Roman Lob.
+
+![](any_topic_files/standing_still.png){fig-align="center"}
+
+## My favourite artist of all time
+
+```{r}
+#executed but not displayed R-code
+
+fav_artist_alltime <- spotify |>
+  group_by(artist) |>
+  summarise(hours = sum(minutes) / 60) |>
+  slice_max(hours, n = 10) |>
+  ggplot(aes(x = hours, y = reorder(artist, hours))) +
+  geom_col(fill = "#1DB954") +
+  labs(x = "Time (hours)", y = NULL,
+       title = "My favourite artists of all time") +
+  theme_minimal()
+
+(fav_artist_alltime)
+```
+(Sorry about the Ed Sheeran part)
+
+## How many hours did I listen to per month? 
+
+```{r}
+
+spotify <- spotify |>
+  mutate(month = floor_date(ts, "month") |> as_date())
+
+monthly_hours <- spotify |>
+  group_by(month) |>
+  summarise(hours = sum(minutes) / 60, .groups = "drop") |>
+  complete(month = seq(min(month), max(month), by = "month"),
+           fill = list(hours = 0))
+
+```
+
+```{r}
+#| echo: false
+dygraph(monthly_hours, main = "Amount of hours listening to music", ylab = "hours")
+
+```
+
+## Favourite song last year
+
+The song I most listened to last year was written and sung in german. You can find the translation of the refrain below. Song: *Hals Über Kopf by frytz & Dominik Hartz*
+
+:::::: columns
+::: {.column width="45%"}
+"Ich bin ein kleines bisschen Hals über Kopf, head over heels Immer on the run, kein'n Plan, wo das Ziel ist Aber ich brauch' nicht viel und ich nehm' alles mit \[...\] Alles geht so schnell, aber wir halten Schritt"
+:::
+
+::: {.column width="10%"}
+:::
+
+::: {.column width="45%"}
+"I’m just a little bit head over heels Always on the run, no idea where I’m heading But I don’t need much and I take everything with me \[...\] Everything’s going so fast, but we’re keeping up"
+:::
+::::::
+
+## Shuffle Mode ON 
+### The Fisher- Yates Shuffle Technique
+
+$$
+\begin{equation}
+\begin{aligned}
+&\text{Input: } A \text{ is a sequence of } n \text{ symbols} \\[2mm]
+&\textbf{For } i = n-1 \text{ down to } 1 \textbf{ Do} \\
+&\hspace{1cm} T[i] = \text{random number } j \in [0,i] \\
+&\textbf{End For} \\[2mm]
+&\textbf{For } i = n-1 \text{ down to } 1 \textbf{ Do} \\
+&\hspace{1cm} j = T[i] \\
+&\hspace{1cm} \textbf{If } j \neq i \textbf{ Then} \\
+&\hspace{2cm} B = A[j] \\
+&\hspace{2cm} A[j] = A[i] \\
+&\hspace{2cm} A[i] = B \\
+&\hspace{1cm} \textbf{End If} \\
+&\textbf{End For}
+\end{aligned}
+\end{equation}
+$$
+
+[Find out more here](https://codezup.com/spotify-shuffle-algorithm-not-random/)
+
+## Motivation Music
+
+I do not only like to listen to music; I also love to do sports. Listening to music makes my runs easier. This subjective feeling is supported by meta-analytical results which show that listening to music while exercising enhances enjoyment and reduces the perceived exertion [@terry_effects_2020].
+
+
+```{r}
+#| include: false
+library(renv)
+renv::init()
+```
+## References 
+
+::: {#refs}
+:::
