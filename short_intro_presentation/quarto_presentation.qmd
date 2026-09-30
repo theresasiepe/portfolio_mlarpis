@@ -1,0 +1,35 @@
+---
+title: "Quarto Presentation"
+author: 
+    name: Theresa Siepe
+    id: ts
+    orcid: 0009-0002-8460-3759
+    email: t.siepe@uu.nl
+format: 
+  revealjs:
+    scrollable: true
+editor: visual
+---
+
+## My favourite equation
+
+
+
+$$ a^2 + b^2 = c^2 $$
+
+
+
+## Information about me
+
+I was able to unlock my younger sister's phone using Face ID. 
+
+:::{.callout-note .fragment}
+## Photo Proof
+
+![](quarto_presentation_files/sister.png){width=100}
+
+:::
+
+
+
+
